@@ -151,6 +151,50 @@ flowchart TD
 
 ---
 
+## 4. `metal-router/` — MetalRouter (Production Full Stack)
+
+**Language:** Objective-C · MSL  
+**What it does:** Production-grade dual-stack (IPv4/IPv6) software router. Superset of `objc-router/` — adds Checksum rewrite, Fragmentation drop, full NeighborCache (ARP+NDP with TTL aging), incremental DIRTables, ControlPlane text commands, Benchmark harness, utun real I/O, and Network Extension skeleton.
+
+```
+metal-router/
+├── Sources/
+│   ├── Packet.{h,m}            dual-stack, checksum rewrite in serialized
+│   ├── Interface.{h,m}         IPv4 + IPv6 prefix matching
+│   ├── RouteTable.{h,m}        binary trie IPv4 (O(32)) + IPv6 (O(128))
+│   ├── TrieNode.{h,m}
+│   ├── DIRTables.{h,m}         incremental DIR-24-8 + 16-bit IPv6 tables
+│   ├── MetalAccelerator.{h,m}  DIR-24-8 GPU dispatch, embedded MSL fallback
+│   ├── NeighborCache.{h,m}     ARP + NDP, TTL-based aging, IPv4 + IPv6
+│   ├── Checksum.{h,m}          one's complement IP/TCP/UDP checksums
+│   ├── Fragmentation.{h,m}     IPv4 fragment detection + drop policy
+│   ├── Router.{h,m}            full forwarding: CPU + Metal + neighbor + frag
+│   ├── UtunInterface.{h,m}     real packet I/O via macOS utun
+│   ├── ControlPlane.{h,m}      text commands: add/del/show routes|stats|neighbors
+│   ├── Benchmark.{h,m}         CPU trie vs Metal DIR timing harness
+│   └── main.m
+├── Shaders/Shaders.metal        dir24_8_classify kernel
+└── NetworkExtension/
+    └── PacketTunnelProvider.{h,m}   NEPacketTunnelProvider skeleton
+```
+
+### Routers compared
+
+| | `objc-router/` | `metal-router/` |
+|---|---|---|
+| **Language** | Objective-C + MSL | Objective-C + MSL |
+| **IPv6** | Partial | Full (trie + NDP cache) |
+| **LPM data structure** | Linear scan / trie | Binary trie + incremental DIR-24-8 |
+| **GPU batch threshold** | > 4 packets | > 8 packets |
+| **Checksum rewrite** | No | Yes (IP header on forward) |
+| **Fragmentation** | No | Drop non-first fragments |
+| **Neighbor cache** | Header only | Full ARP+NDP with TTL aging |
+| **Control plane** | None | Text commands (add/del/show) |
+| **Benchmark harness** | No | Yes (CPU vs Metal Mpps) |
+| **Real I/O** | No | utun + NEPacketTunnelProvider |
+
+---
+
 ## Cross-subsystem: NOUL as the router's decision head
 
 ```mermaid
