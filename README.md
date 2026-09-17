@@ -17,7 +17,17 @@
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Apple%20Silicon-lightgrey?style=flat-square)
 ![Status](https://img.shields.io/badge/status-production--architecture-blueviolet?style=flat-square)
 
-Three production-grade Nova Parr drops in one monorepo. Each subsystem is independently buildable. No Python runtimes in the hot path. No NVIDIA emulation on Apple.
+Four subsystems built by Nova Parr, collected in one monorepo:
+
+1. **cuda2metal/** — A compiler that translates NVIDIA CUDA GPU code into Apple Metal GPU code. Not a regex find-and-replace — a full compiler with lexer, parser, typed AST, SSA IR, optimization passes, and Metal Shading Language output. If a CUDA construct can't be translated safely, it fails with a named error instead of producing wrong code.
+
+2. **noul/** — A decision engine that plugs into any language model. Instead of generating text token-by-token, it takes the model's internal logit scores and produces a single typed decision (yes/no, pick-one-of-N, or a numeric score) in one pass. Runs on CPU, NVIDIA GPU (WMMA tensor cores), or Apple GPU (Metal simdgroup). Python and Rust bindings included.
+
+3. **objc-router/** — A software IP packet router written in Objective-C with Metal GPU acceleration. Routes IPv4 packets using longest-prefix matching: small batches use a CPU binary trie, large batches get offloaded to the GPU via a DIR-24-8 lookup table for O(1) forwarding.
+
+4. **metal-router/** — The production version of the router above. Adds full IPv6 support, IP/TCP/UDP checksum verification, fragment detection and drop policy, ARP+NDP neighbor cache with TTL aging, a text-based control plane (add/delete/show routes at runtime), a CPU-vs-GPU benchmark harness, real packet I/O via macOS utun, and a Network Extension skeleton for App Store deployment.
+
+Each subsystem builds independently. No Python in the forwarding path. No NVIDIA emulation layer on Apple — native Metal throughout.
 
 ---
 
